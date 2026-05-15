@@ -102,3 +102,5 @@ reason은 한국어로 한 문장만 작성한다.
 app.listen(port, () => {
   console.log(`Server is running at http://localhost:${port}`);
 });
+
+module.exports = app;
