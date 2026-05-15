@@ -11,14 +11,20 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../')));
 
-// Initialize Gemma 4 (Adjusted for long outputs and stability)
+// Initialize Gemma 4 (Adjusted for stability and safety filters)
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const model = genAI.getGenerativeModel({ 
   model: "gemma-4-31b-it",
   generationConfig: { 
     maxOutputTokens: 2048,
     temperature: 0.2
-  }
+  },
+  safetySettings: [
+    { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+    { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+    { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+    { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" }
+  ]
 });
 
 // Initialize Supabase
