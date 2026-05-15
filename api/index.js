@@ -51,21 +51,20 @@ app.post('/api/analyze', async (req, res) => {
   try {
     // Gemma 4 Analysis
     const prompt = `
-      Analyze the sentiment of the following Korean text.
+      너는 한국어 텍스트 감성 분석기다. 다음 텍스트의 감성을 분석하여 JSON 형식으로만 응답해라.
+      절대로 말줄임표(...)나 생략을 사용하지 말고 모든 필드를 끝까지 완성해라.
       
-      Respond with a JSON object in this format:
+      [응답 예시]
       {
-        "sentiment": "positive" | "negative" | "neutral",
-        "confidence": integer (0-100),
-        "reason": "one sentence explanation in Korean"
+        "sentiment": "positive",
+        "confidence": 95,
+        "reason": "사용자가 상대방에 대한 깊은 애정과 신뢰를 표현하고 있으며 미래에 대한 긍정적인 기대를 나타내고 있습니다."
       }
       
-      IMPORTANT: 
-      - Output MUST be a single JSON object.
-      - DO NOT use ellipses (...) or truncate any fields. 
-      - Provide the full "reason" in one complete sentence.
+      [분석할 텍스트]
+      ${text}
       
-      Text to analyze: ${JSON.stringify(text)}
+      [결과 JSON]
     `;
 
     const resultGemini = await model.generateContent(prompt);
