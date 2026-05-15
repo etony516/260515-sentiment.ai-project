@@ -11,10 +11,10 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../')));
 
-// Initialize Gemini
+// Initialize Gemma 4
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const model = genAI.getGenerativeModel({ 
-  model: "gemini-1.5-flash",
+  model: "gemma-4-31b",
   generationConfig: { responseMimeType: "application/json" }
 });
 
