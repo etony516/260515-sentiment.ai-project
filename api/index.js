@@ -50,22 +50,25 @@ app.post('/api/analyze', async (req, res) => {
         "reason": "one sentence explanation in Korean"
       }
       
-      IMPORTANT: Output MUST be valid JSON only. No extra text, no markdown, no explanation.
+      IMPORTANT: Output MUST be valid JSON only. No extra text, no markdown, no preamble, no postscript.
       
-      Text to analyze: "${text}"
+      Text to analyze: ${JSON.stringify(text)}
     `;
 
     const resultGemini = await model.generateContent(prompt);
     const response = await resultGemini.response;
     let rawText = response.text();
     
-    // Improved JSON extraction using regex
-    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-    if (!jsonMatch) {
+    // Find the first { and the corresponding last }
+    const startIdx = rawText.indexOf('{');
+    const endIdx = rawText.lastIndexOf('}');
+    
+    if (startIdx === -1 || endIdx === -1 || endIdx < startIdx) {
       throw new Error("API response does not contain a valid JSON object.");
     }
     
-    const result = JSON.parse(jsonMatch[0]);
+    const jsonString = rawText.substring(startIdx, endIdx + 1).trim();
+    const result = JSON.parse(jsonString);
 
     // Log to Supabase
     if (supabase) {
