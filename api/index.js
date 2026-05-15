@@ -11,10 +11,10 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../')));
 
-// Initialize Gemma 4 (Adjusted for stability and safety filters)
+// Initialize Gemma 4 (E4B version for better stability in the current API environment)
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const model = genAI.getGenerativeModel({ 
-  model: "gemma-4-31b-it",
+  model: "gemma-4-e4b-it",
   generationConfig: { 
     maxOutputTokens: 2048,
     temperature: 0.2
@@ -62,7 +62,7 @@ app.post('/api/analyze', async (req, res) => {
       }
       
       [분석할 텍스트]
-      ${text}
+      ${JSON.stringify(text)}
       
       [결과 JSON]
     `;
