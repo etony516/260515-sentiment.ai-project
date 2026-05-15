@@ -11,11 +11,10 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../')));
 
-// Initialize Gemma 4 (31B Dense as requested)
+// Initialize Gemma 4 (Disabling API-level JSON mode for stability)
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const model = genAI.getGenerativeModel({ 
-  model: "gemma-4-31b-it",
-  generationConfig: { responseMimeType: "application/json" }
+  model: "gemma-4-31b-it"
 });
 
 // Initialize Supabase
@@ -43,14 +42,15 @@ app.post('/api/analyze', async (req, res) => {
     // Gemma 4 Analysis
     const prompt = `
       Analyze the sentiment of the following Korean text.
-      Return ONLY a JSON object with this structure:
+      
+      Respond with a JSON object in this format:
       {
         "sentiment": "positive" | "negative" | "neutral",
         "confidence": integer (0-100),
         "reason": "one sentence explanation in Korean"
       }
       
-      IMPORTANT: Output MUST be valid JSON only. No extra text, no markdown, no preamble.
+      IMPORTANT: Output MUST include the JSON object.
       
       Text to analyze: ${JSON.stringify(text)}
     `;
