@@ -41,8 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await response.json();
 
       if (!response.ok) {
-        const errorMsg = data.details ? `${data.error} (${data.details})` : (data.error || '분석 중 오류가 발생했습니다.');
-        throw new Error(errorMsg);
+        // Log details to console for developers
+        if (data.details) console.error('API Error Details:', data.details);
+        throw new Error(data.error || '분석 중 오류가 발생했습니다.');
       }
 
       // Display Result
