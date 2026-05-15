@@ -11,10 +11,14 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../')));
 
-// Initialize Gemma 4 (Disabling API-level JSON mode for stability)
+// Initialize Gemma 4 (Adjusted for long outputs and stability)
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const model = genAI.getGenerativeModel({ 
-  model: "gemma-4-31b-it"
+  model: "gemma-4-31b-it",
+  generationConfig: { 
+    maxOutputTokens: 2048,
+    temperature: 0.2
+  }
 });
 
 // Initialize Supabase
@@ -50,7 +54,10 @@ app.post('/api/analyze', async (req, res) => {
         "reason": "one sentence explanation in Korean"
       }
       
-      IMPORTANT: Output MUST include the JSON object.
+      IMPORTANT: 
+      - Output MUST be a single JSON object.
+      - DO NOT use ellipses (...) or truncate any fields. 
+      - Provide the full "reason" in one complete sentence.
       
       Text to analyze: ${JSON.stringify(text)}
     `;
