@@ -11,10 +11,10 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../')));
 
-// Initialize Gemini 3.1 Pro (Latest stable flagship model)
+// Initialize Gemma 4 (31B Dense as requested)
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const model = genAI.getGenerativeModel({ 
-  model: "gemini-3.1-pro",
+  model: "gemma-4-31b-it",
   generationConfig: { responseMimeType: "application/json" }
 });
 
@@ -40,18 +40,17 @@ app.post('/api/analyze', async (req, res) => {
   }
 
   try {
-    // AI Analysis
+    // Gemma 4 Analysis
     const prompt = `
       Analyze the sentiment of the following Korean text.
-      You must respond with ONLY a valid JSON object. No other text.
-      JSON structure:
+      Return ONLY a JSON object with this structure:
       {
         "sentiment": "positive" | "negative" | "neutral",
         "confidence": integer (0-100),
         "reason": "one sentence explanation in Korean"
       }
       
-      IMPORTANT: Ensure strings are properly escaped. Do not include any markdown formatting.
+      IMPORTANT: Output MUST be valid JSON only. No extra text, no markdown, no preamble.
       
       Text to analyze: ${JSON.stringify(text)}
     `;
@@ -60,26 +59,48 @@ app.post('/api/analyze', async (req, res) => {
     const response = await resultGemini.response;
     let rawText = response.text();
     
-    const startIdx = rawText.indexOf('{');
+    // String-aware brace matching extraction
+    let startIdx = rawText.indexOf('{');
     if (startIdx === -1) {
-      throw new Error("API response does not contain a starting brace '{'.");
+      throw new Error("API response does not contain '{'.");
     }
 
-    // Robust extraction: Find the matching closing brace for the first {
     let braceCount = 0;
+    let inString = false;
+    let escapeNext = false;
     let endIdx = -1;
+
     for (let i = startIdx; i < rawText.length; i++) {
-      if (rawText[i] === '{') braceCount++;
-      else if (rawText[i] === '}') braceCount--;
-      
-      if (braceCount === 0) {
-        endIdx = i;
-        break;
+      const char = rawText[i];
+
+      if (escapeNext) {
+        escapeNext = false;
+        continue;
+      }
+
+      if (char === '\\') {
+        escapeNext = true;
+        continue;
+      }
+
+      if (char === '"') {
+        inString = !inString;
+        continue;
+      }
+
+      if (!inString) {
+        if (char === '{') braceCount++;
+        else if (char === '}') braceCount--;
+
+        if (braceCount === 0) {
+          endIdx = i;
+          break;
+        }
       }
     }
-    
+
     if (endIdx === -1) {
-      throw new Error("API response does not contain a matching closing brace '}'.");
+      throw new Error("API response does not contain a matching '}'.");
     }
     
     const jsonString = rawText.substring(startIdx, endIdx + 1).trim();
