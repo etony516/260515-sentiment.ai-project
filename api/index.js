@@ -42,29 +42,30 @@ app.post('/api/analyze', async (req, res) => {
   try {
     // Gemma 4 Analysis
     const prompt = `
-      너는 한국어 텍스트 감성 분석기다. 
-      사용자 텍스트를 positive, negative, neutral 중 하나로 분류한다. 
-      confidence는 0부터 100 사이의 정수로 작성한다. 
-      reason은 한국어로 한 문장만 작성한다. 
-      과장하지 말고 텍스트 근거만 사용한다. 
-      반드시 아래 JSON 형식으로만 응답한다 (다른 텍스트는 포함하지 말 것):
+      Analyze the sentiment of the following Korean text.
+      Return ONLY a JSON object with this structure:
       {
-        "sentiment": "positive | negative | neutral",
-        "confidence": number,
-        "reason": "string"
+        "sentiment": "positive" | "negative" | "neutral",
+        "confidence": integer (0-100),
+        "reason": "one sentence explanation in Korean"
       }
       
-      분석할 텍스트: "${text}"
+      IMPORTANT: Output MUST be valid JSON only. No extra text, no markdown, no explanation.
+      
+      Text to analyze: "${text}"
     `;
 
     const resultGemini = await model.generateContent(prompt);
     const response = await resultGemini.response;
     let rawText = response.text();
     
-    // Clean up potential markdown code blocks
-    rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+    // Improved JSON extraction using regex
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) {
+      throw new Error("API response does not contain a valid JSON object.");
+    }
     
-    const result = JSON.parse(rawText);
+    const result = JSON.parse(jsonMatch[0]);
 
     // Log to Supabase
     if (supabase) {
