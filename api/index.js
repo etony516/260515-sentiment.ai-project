@@ -11,10 +11,10 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../')));
 
-// Initialize Gemma 4 (E4B version for better stability in the current API environment)
+// Initialize Gemma 4 (31B Dense)
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const model = genAI.getGenerativeModel({ 
-  model: "gemma-4-e4b-it",
+  model: "gemma-4-31b-it",
   generationConfig: { 
     maxOutputTokens: 2048,
     temperature: 0.2
@@ -84,30 +84,13 @@ app.post('/api/analyze', async (req, res) => {
 
     for (let i = startIdx; i < rawText.length; i++) {
       const char = rawText[i];
-
-      if (escapeNext) {
-        escapeNext = false;
-        continue;
-      }
-
-      if (char === '\\') {
-        escapeNext = true;
-        continue;
-      }
-
-      if (char === '"') {
-        inString = !inString;
-        continue;
-      }
-
+      if (escapeNext) { escapeNext = false; continue; }
+      if (char === '\\') { escapeNext = true; continue; }
+      if (char === '"') { inString = !inString; continue; }
       if (!inString) {
         if (char === '{') braceCount++;
         else if (char === '}') braceCount--;
-
-        if (braceCount === 0) {
-          endIdx = i;
-          break;
-        }
+        if (braceCount === 0) { endIdx = i; break; }
       }
     }
 
@@ -118,31 +101,45 @@ app.post('/api/analyze', async (req, res) => {
     const jsonString = rawText.substring(startIdx, endIdx + 1).trim();
     const result = JSON.parse(jsonString);
 
-    // Log to Supabase
     if (supabase) {
-      supabase
-        .from('sentiment_logs')
-        .insert([
-          {
-            input_text: text,
-            sentiment: result.sentiment,
-            confidence: result.confidence,
-            reason: result.reason
-          }
-        ])
-        .then(({ error }) => {
-          if (error) console.error('Supabase Error:', error.message);
-        });
+      supabase.from('sentiment_logs').insert([{
+        input_text: text,
+        sentiment: result.sentiment,
+        confidence: result.confidence,
+        reason: result.reason
+      }]).then(({ error }) => { if (error) console.error('Supabase Error:', error.message); });
     }
 
     res.json(result);
   } catch (error) {
     console.error('API Error Details:', error);
-    // Provide more specific error info to the user for debugging
-    res.status(500).json({ 
-      error: '분석 중 문제가 발생했습니다.',
-      details: error.message 
-    });
+    
+    // AI Dynamic Error Analysis
+    try {
+      const errorAnalysisPrompt = `
+        다음 텍스트를 감성 분석하려고 시도했으나 서버 오류가 발생했습니다.
+        이 텍스트가 왜 AI 모델에게 혼란을 주거나 오류를 일으켰을지 사용자에게 친절하고 자연스러운 한국어로 설명해주세요.
+        전문적인 용어보다는 "내용이 너무 복잡하거나 감정이 중첩되어 분석이 어렵다"는 식의 뉘앙스로 설명해주세요.
+        반드시 한 문장으로만 답변하세요.
+        
+        [오류가 발생한 텍스트]
+        ${text}
+      `;
+      
+      const errorResult = await model.generateContent(errorAnalysisPrompt);
+      const errorResponse = await errorResult.response;
+      const aiExplanation = errorResponse.text().trim();
+      
+      res.status(500).json({ 
+        error: '분석 중 문제가 발생했습니다.',
+        details: aiExplanation || error.message
+      });
+    } catch (innerError) {
+      res.status(500).json({ 
+        error: '분석 중 문제가 발생했습니다.',
+        details: '현재 서비스 과부하로 인해 Gemma 4 모델이 일시적으로 응답하지 않습니다. 잠시 후 다시 시도해 주세요.'
+      });
+    }
   }
 });
 

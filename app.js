@@ -27,23 +27,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     try {
-      // Set Loading State
-      setLoading(true);
+      analyzeBtn.disabled = true;
+      analyzeBtn.textContent = '분석 중...';
+      resultArea.classList.add('hidden');
 
       const response = await fetch('/api/analyze', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ text })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        // Log details to console for developers
-        if (data.details) console.error('API Error Details:', data.details);
-        throw new Error(data.error || '분석 중 오류가 발생했습니다.');
+        // Log technical details to console
+        if (data.details) console.error('API Technical Error:', data.details);
+        
+        // Show "Analyzing error cause..." temporarily if it's a server error
+        analyzeBtn.textContent = '오류 원인 분석 중...';
+        
+        // Use the AI-generated explanation if available
+        throw new Error(data.details || data.error || '분석 중 오류가 발생했습니다.');
       }
 
       // Display Result
