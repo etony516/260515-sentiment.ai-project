@@ -11,10 +11,10 @@ const port = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '../')));
 
-// Initialize Gemma 4 (MoE version for stability)
+// Initialize Gemini 1.5 Pro (Most stable and powerful for complex reasoning)
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const model = genAI.getGenerativeModel({ 
-  model: "gemma-4-26b-a4b-it",
+  model: "gemini-1.5-pro",
   generationConfig: { responseMimeType: "application/json" }
 });
 
@@ -40,17 +40,18 @@ app.post('/api/analyze', async (req, res) => {
   }
 
   try {
-    // Gemma 4 Analysis
+    // AI Analysis
     const prompt = `
       Analyze the sentiment of the following Korean text.
-      Return ONLY a JSON object with this structure:
+      You must respond with ONLY a valid JSON object. No other text.
+      JSON structure:
       {
         "sentiment": "positive" | "negative" | "neutral",
         "confidence": integer (0-100),
         "reason": "one sentence explanation in Korean"
       }
       
-      IMPORTANT: Output MUST be valid JSON only. No extra text, no markdown, no preamble, no postscript.
+      IMPORTANT: Ensure strings are properly escaped. Do not include any markdown formatting.
       
       Text to analyze: ${JSON.stringify(text)}
     `;
