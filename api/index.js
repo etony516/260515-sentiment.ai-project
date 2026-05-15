@@ -14,7 +14,7 @@ app.use(express.static(path.join(__dirname, '../')));
 // Initialize Gemma 4
 const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
 const model = genAI.getGenerativeModel({ 
-  model: "gemma-4-31b",
+  model: "gemma-4-31b-it",
   generationConfig: { responseMimeType: "application/json" }
 });
 
