@@ -41,7 +41,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || '분석 중 오류가 발생했습니다.');
+        const errorMsg = data.details ? `${data.error} (${data.details})` : (data.error || '분석 중 오류가 발생했습니다.');
+        throw new Error(errorMsg);
       }
 
       // Display Result

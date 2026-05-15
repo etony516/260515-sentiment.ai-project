@@ -40,26 +40,31 @@ app.post('/api/analyze', async (req, res) => {
   }
 
   try {
-    // Gemini Analysis
+    // Gemma 4 Analysis
     const prompt = `
       너는 한국어 텍스트 감성 분석기다. 
       사용자 텍스트를 positive, negative, neutral 중 하나로 분류한다. 
       confidence는 0부터 100 사이의 정수로 작성한다. 
       reason은 한국어로 한 문장만 작성한다. 
       과장하지 말고 텍스트 근거만 사용한다. 
-      반드시 아래 JSON 형식으로만 응답한다:
+      반드시 아래 JSON 형식으로만 응답한다 (다른 텍스트는 포함하지 말 것):
       {
         "sentiment": "positive | negative | neutral",
         "confidence": number,
         "reason": "string"
       }
       
-      사용자 텍스트: "${text}"
+      분석할 텍스트: "${text}"
     `;
 
     const resultGemini = await model.generateContent(prompt);
     const response = await resultGemini.response;
-    const result = JSON.parse(response.text());
+    let rawText = response.text();
+    
+    // Clean up potential markdown code blocks
+    rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+    
+    const result = JSON.parse(rawText);
 
     // Log to Supabase
     if (supabase) {
@@ -80,8 +85,12 @@ app.post('/api/analyze', async (req, res) => {
 
     res.json(result);
   } catch (error) {
-    console.error('Gemini or Server Error:', error);
-    res.status(500).json({ error: '분석 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.' });
+    console.error('API Error Details:', error);
+    // Provide more specific error info to the user for debugging
+    res.status(500).json({ 
+      error: '분석 중 문제가 발생했습니다.',
+      details: error.message 
+    });
   }
 });
 
