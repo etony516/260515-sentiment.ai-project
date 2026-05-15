@@ -59,12 +59,26 @@ app.post('/api/analyze', async (req, res) => {
     const response = await resultGemini.response;
     let rawText = response.text();
     
-    // Find the first { and the corresponding last }
     const startIdx = rawText.indexOf('{');
-    const endIdx = rawText.lastIndexOf('}');
+    if (startIdx === -1) {
+      throw new Error("API response does not contain a starting brace '{'.");
+    }
+
+    // Robust extraction: Find the matching closing brace for the first {
+    let braceCount = 0;
+    let endIdx = -1;
+    for (let i = startIdx; i < rawText.length; i++) {
+      if (rawText[i] === '{') braceCount++;
+      else if (rawText[i] === '}') braceCount--;
+      
+      if (braceCount === 0) {
+        endIdx = i;
+        break;
+      }
+    }
     
-    if (startIdx === -1 || endIdx === -1 || endIdx < startIdx) {
-      throw new Error("API response does not contain a valid JSON object.");
+    if (endIdx === -1) {
+      throw new Error("API response does not contain a matching closing brace '}'.");
     }
     
     const jsonString = rawText.substring(startIdx, endIdx + 1).trim();
