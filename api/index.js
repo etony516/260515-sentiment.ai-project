@@ -119,8 +119,11 @@ app.post('/api/analyze', async (req, res) => {
       const errorAnalysisPrompt = `
         다음 텍스트를 감성 분석하려고 시도했으나 서버 오류가 발생했습니다.
         이 텍스트가 왜 AI 모델에게 혼란을 주거나 오류를 일으켰을지 사용자에게 친절하고 자연스러운 한국어로 설명해주세요.
-        전문적인 용어보다는 "내용이 너무 복잡하거나 감정이 중첩되어 분석이 어렵다"는 식의 뉘앙스로 설명해주세요.
-        반드시 한 문장으로만 답변하세요.
+        
+        [지시사항]
+        1. 반드시 마침표(.)로 끝나는 단 한 문장으로만 답변하세요.
+        2. 마크다운 기호(*, -, # 등)나 인사말, 서론("이 텍스트는...", "분석 결과...")은 절대 사용하지 마세요.
+        3. 예시: 입력하신 문장에 상반된 감정이 섞여 있어 현재 모델이 감성을 하나로 정의하기 어렵습니다.
         
         [오류가 발생한 텍스트]
         ${text}
@@ -128,7 +131,19 @@ app.post('/api/analyze', async (req, res) => {
       
       const errorResult = await model.generateContent(errorAnalysisPrompt);
       const errorResponse = await errorResult.response;
-      const aiExplanation = errorResponse.text().trim();
+      let aiExplanation = errorResponse.text().trim();
+      
+      // Clean up markdown and prefixes
+      aiExplanation = aiExplanation.replace(/[\*\#\`]/g, '');
+      aiExplanation = aiExplanation.replace(/^(네, |설명:|오류 원인:|답변:|이유:)\s*/i, '');
+      
+      // Ensure only the first sentence is kept
+      const match = aiExplanation.match(/^[^.!?]+[.!?]/);
+      if (match) {
+        aiExplanation = match[0].trim();
+      } else {
+        aiExplanation = aiExplanation.trim() + '.';
+      }
       
       res.status(500).json({ 
         error: '분석 중 문제가 발생했습니다.',
